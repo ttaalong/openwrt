@@ -304,6 +304,7 @@ jobs:
           CONFIG_PACKAGE_luci-proto-ipv6=y
           CONFIG_PACKAGE_luci-proto-ppp=y
           CONFIG_PACKAGE_luci-theme-bootstrap=y
+          CONFIG_PACKAGE_luci-theme-argon=y
           CONFIG_PACKAGE_madplay=y
           CONFIG_PACKAGE_minidlna=y
           CONFIG_PACKAGE_mpd-avahi-service=y

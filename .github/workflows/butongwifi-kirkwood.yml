@@ -23,6 +23,11 @@ on:
   #   - cron: 0 20 * * *
   # release:
   #   types: [published]
+env:
+  MYPACKAGES: https://github.com/aboutboy/mypackages.git
+  REPO_BRANCH: master
+  TZ: Asia/Shanghai
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -45,12 +50,16 @@ jobs:
           sudo -E apt-get -y install build-essential ccache ecj fastjar file g++ gawk gettext git java-propose-classpath libelf-dev libncurses5-dev libncursesw5-dev libssl-dev python python2.7-dev python3 unzip wget python3-distutils python3-setuptools rsync subversion swig time xsltproc zlib1g-dev
           sudo -E apt-get -y autoremove --purge
           sudo -E apt-get clean
+          sudo timedatectl set-timezone "$TZ"
+          git clone $MYPACKAGE -b $REPO_BRANCH ./package/mypackages
+
       - name: Update feeds（更新订阅）
         run: |
           pwd
           df -hT $PWD
           ./scripts/feeds update -a
           ./scripts/feeds install -a
+  
       - name: Costom configure file（butongwifi-kirkwood编译设置）
         run: |
           rm -f ./.config*

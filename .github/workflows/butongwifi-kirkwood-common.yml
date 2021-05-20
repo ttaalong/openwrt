@@ -6,7 +6,7 @@
 # 
 # <https://github.com/KFERMercer/OpenWrt-CI>
 #
-name: OpenWrt-BUTONGWIFI-CI-BASE
+name: OpenWrt-BUTONGWIFI-CI-COMMON
 on:
   repository_dispatch:
   workflow_dispatch:

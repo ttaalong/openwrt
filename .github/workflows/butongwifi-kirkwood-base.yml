@@ -190,6 +190,7 @@ jobs:
           CONFIG_PACKAGE_luci-proto-ppp=y
           CONFIG_PACKAGE_luci-theme-bootstrap=y
           CONFIG_PACKAGE_luci-theme-argon=y
+          CONFIG_PACKAGE_luci-theme-butongwifi=y
           CONFIG_PACKAGE_rpcd=y
           CONFIG_PACKAGE_rpcd-mod-file=y
           CONFIG_PACKAGE_rpcd-mod-iwinfo=y
@@ -228,7 +229,8 @@ jobs:
           find ./bin/targets/ -name "lce-kirkwood-*wifi-uImage" | xargs -i mv -f {} ./artifact/
           find ./bin/targets/ -name "lce-kirkwood-*wifi-squashfs-factory.bin" | xargs -i mv -f {} ./artifact/
           ls -lRth ./artifact/ > ./artifact/mytargets.txt
-          ls -lRth ./bin/targets/ > ./artifact/targets.txt
+          ls -lRth ./bin/targets/ >> ./artifact/mytargets.txt
+          cat .config >> ./artifact/mytargets.txt
   
       - name: Upload artifact（上传）
         uses: actions/upload-artifact@v2

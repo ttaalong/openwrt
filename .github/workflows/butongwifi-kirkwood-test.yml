@@ -1,0 +1,237 @@
+#
+# This is free software, lisence use MIT.
+# 
+# Copyright (C) 2019 P3TERX <https://p3terx.com>
+# Copyright (C) 2019 KFERMercer <KFER.Mercer@gmail.com>
+# 
+# <https://github.com/KFERMercer/OpenWrt-CI>
+#
+name: OpenWrt-BUTONGWIFI-CI-TEST
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
+  # push:
+  #  branches: 
+  #    - master
+  # schedule:
+  #   - cron: 0 20 * * *
+  # release:
+  #   types: [published]
+
+env:
+  MYPACKAGES: https://github.com/aboutboy/mypackages.git
+  REPO_BRANCH: main
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: github.event.repository.owner.id == github.event.sender.id
+    steps:
+
+      - name: Checkout（检出代码）
+        uses: actions/checkout@master
+        with:
+          ref: master
+
+      - name: Initialization environment（初始化环境）
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          docker rmi `docker images -q`
+          echo "Deleting files, please wait ..."
+          sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php
+          sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php*
+          for apt_file in `grep -lr microsoft /etc/apt/sources.list.d/`; do sudo rm $apt_file; done
+          sudo -E apt-get update
+          sudo -E apt-get -y install build-essential ccache ecj fastjar file g++ gawk gettext git java-propose-classpath libelf-dev libncurses5-dev libncursesw5-dev libssl-dev python python2.7-dev python3 unzip wget python3-distutils python3-setuptools rsync subversion swig time xsltproc zlib1g-dev
+          sudo -E apt-get -y autoremove --purge
+          sudo -E apt-get clean
+
+      - name: Update feeds（更新订阅）
+        run: |
+          git reset --hard 142cf2a
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Costom configure file（butongwifi-kirkwood编译设置）
+        run: |
+          rm -f ./.config*
+          touch ./.config
+          #
+          # ========================固件定制部分========================
+          # 
+          # 
+          # 如果不对本区块做出任何编辑, 则生成默认配置固件. 
+          # 
+          # 以下为定制化固件选项和说明:
+          #
+          #
+          # 有些插件/选项是默认开启的, 如果想要关闭, 请参照以下示例进行编写:
+          # 
+          #          =========================================
+          #         |  # 取消编译VMware镜像:                   |
+          #         |  cat >> .config <<EOF                   |
+          #         |  # CONFIG_VMDK_IMAGES is not set        |
+          #         |  EOF                                    |
+          #          =========================================
+          #
+          # 
+          # 以下是一些提前准备好的一些插件选项.
+          # 直接取消注释相应代码块即可应用. 不要取消注释代码块上的汉字说明.
+          # 如果不需要代码块里的某一项配置, 只需要删除相应行.
+          #
+          # 如果需要其他插件, 请按照示例自行添加.
+          # 注意, 只需添加依赖链顶端的包. 如果你需要插件 A, 同时 A 依赖 B, 即只需要添加 A.
+          # 
+          # 无论你想要对固件进行怎样的定制, 都需要且只需要修改 EOF 回环内的内容.
+          # 
+          # 编译kirkwood butongwifi for marvell 88f6281固件:
+          cat >> .config <<EOF
+          CONFIG_TARGET_kirkwood=y
+          CONFIG_TARGET_kirkwood_DEVICE_butong_butongwifi=y
+          CONFIG_TARGET_BOARD="kirkwood"
+          CONFIG_ATH_USER_REGD=y
+          CONFIG_DRIVER_11N_SUPPORT=y
+          CONFIG_LUCI_LANG_zh_Hans=y
+          CONFIG_PACKAGE_ATH_DFS=y
+          CONFIG_PACKAGE_MAC80211_DEBUGFS=y
+          CONFIG_PACKAGE_MAC80211_MESH=y
+          CONFIG_PACKAGE_badblocks=y
+          CONFIG_PACKAGE_block-mount=y
+          CONFIG_PACKAGE_cgi-io=y
+          # CONFIG_PACKAGE_dnsmasq is not set
+          CONFIG_PACKAGE_dnsmasq-full=y
+          CONFIG_PACKAGE_dnsmasq_full_auth=y
+          CONFIG_PACKAGE_dnsmasq_full_conntrack=y
+          CONFIG_PACKAGE_dnsmasq_full_dhcp=y
+          CONFIG_PACKAGE_dnsmasq_full_dhcpv6=y
+          CONFIG_PACKAGE_dnsmasq_full_dnssec=y
+          CONFIG_PACKAGE_dnsmasq_full_ipset=y
+          CONFIG_PACKAGE_dnsmasq_full_noid=y
+          CONFIG_PACKAGE_dnsmasq_full_tftp=y
+          CONFIG_PACKAGE_e2fsprogs=y
+          CONFIG_PACKAGE_fdisk=y
+          CONFIG_PACKAGE_hostapd=y
+          CONFIG_PACKAGE_hostapd-common=y
+          CONFIG_PACKAGE_htop=y
+          CONFIG_PACKAGE_iw=y
+          CONFIG_PACKAGE_kmod-ata-ahci=y
+          CONFIG_PACKAGE_kmod-ath=y
+          CONFIG_PACKAGE_kmod-ath9k=y
+          CONFIG_PACKAGE_kmod-ath9k-common=y
+          CONFIG_PACKAGE_kmod-cfg80211=y
+          CONFIG_PACKAGE_kmod-fs-exfat=y
+          CONFIG_PACKAGE_kmod-fs-msdos=y
+          CONFIG_PACKAGE_kmod-fs-ntfs=y
+          CONFIG_PACKAGE_kmod-fs-reiserfs=y
+          CONFIG_PACKAGE_kmod-fs-vfat=y
+          CONFIG_PACKAGE_kmod-ipt-ipset=y
+          CONFIG_PACKAGE_kmod-mac80211=y
+          CONFIG_PACKAGE_kmod-mii=y
+          CONFIG_PACKAGE_kmod-nf-conntrack-netlink=y
+          CONFIG_PACKAGE_kmod-nfnetlink=y
+          CONFIG_PACKAGE_kmod-nls-cp437=y
+          CONFIG_PACKAGE_kmod-nls-cp936=y
+          CONFIG_PACKAGE_kmod-nls-iso8859-1=y
+          CONFIG_PACKAGE_kmod-nls-utf8=y
+          CONFIG_PACKAGE_kmod-usb-dwc2=y
+          CONFIG_PACKAGE_kmod-usb-net=y
+          CONFIG_PACKAGE_kmod-usb-net-cdc-ether=y
+          CONFIG_PACKAGE_kmod-usb-net-rndis=y
+          CONFIG_PACKAGE_kmod-usb-ohci=y
+          CONFIG_PACKAGE_kmod-usb-roles=y
+          CONFIG_PACKAGE_kmod-usb-storage=y
+          CONFIG_PACKAGE_kmod-usb-storage-extras=y
+          CONFIG_PACKAGE_kmod-usb-uhci=y
+          CONFIG_PACKAGE_libblkid=y
+          CONFIG_PACKAGE_libcomerr=y
+          CONFIG_PACKAGE_libext2fs=y
+          CONFIG_PACKAGE_libfdisk=y
+          CONFIG_PACKAGE_libgmp=y
+          CONFIG_PACKAGE_libiwinfo=y
+          CONFIG_PACKAGE_libiwinfo-lua=y
+          CONFIG_PACKAGE_liblua=y
+          CONFIG_PACKAGE_liblucihttp=y
+          CONFIG_PACKAGE_liblucihttp-lua=y
+          CONFIG_PACKAGE_libmnl=y
+          CONFIG_PACKAGE_libncurses=y
+          CONFIG_PACKAGE_libnetfilter-conntrack=y
+          CONFIG_PACKAGE_libnettle=y
+          CONFIG_PACKAGE_libnfnetlink=y
+          CONFIG_PACKAGE_librt=y
+          CONFIG_PACKAGE_libsmartcols=y
+          CONFIG_PACKAGE_libss=y
+          CONFIG_PACKAGE_libubus-lua=y
+          CONFIG_PACKAGE_libuuid=y
+          CONFIG_PACKAGE_lua=y
+          CONFIG_PACKAGE_luci=y
+          CONFIG_PACKAGE_luci-app-firewall=y
+          CONFIG_PACKAGE_luci-app-opkg=y
+          CONFIG_PACKAGE_luci-base=y
+          CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
+          CONFIG_PACKAGE_luci-i18n-opkg-zh-cn=y
+          CONFIG_PACKAGE_luci-lib-base=y
+          CONFIG_PACKAGE_luci-lib-ip=y
+          CONFIG_PACKAGE_luci-lib-jsonc=y
+          CONFIG_PACKAGE_luci-lib-nixio=y
+          CONFIG_PACKAGE_luci-mod-admin-full=y
+          CONFIG_PACKAGE_luci-mod-network=y
+          CONFIG_PACKAGE_luci-mod-status=y
+          CONFIG_PACKAGE_luci-mod-system=y
+          CONFIG_PACKAGE_luci-proto-ipv6=y
+          CONFIG_PACKAGE_luci-proto-ppp=y
+          CONFIG_PACKAGE_luci-theme-bootstrap=y
+          CONFIG_PACKAGE_luci-theme-butongwifi=y
+          CONFIG_PACKAGE_luci-theme-argon=y
+          CONFIG_PACKAGE_rpcd=y
+          CONFIG_PACKAGE_rpcd-mod-file=y
+          CONFIG_PACKAGE_rpcd-mod-iwinfo=y
+          CONFIG_PACKAGE_rpcd-mod-luci=y
+          CONFIG_PACKAGE_rpcd-mod-rrdns=y
+          CONFIG_PACKAGE_terminfo=y
+          CONFIG_PACKAGE_uhttpd=y
+          CONFIG_PACKAGE_uhttpd-mod-ubus=y
+          CONFIG_PACKAGE_wireless-regdb=y
+          EOF
+          # 
+          # ========================固件定制部分结束========================
+          # 
+          sed -i 's/^[ \t]*//g' ./.config
+          make defconfig
+
+      - name: SSH connection to Actions
+        uses: P3TERX/ssh2actions@main
+        if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+
+      - name: Make download（下载依赖包）
+        run: |
+          make download -j8
+          find dl -size -1024c -exec ls -l {} \;
+          find dl -size -1024c -exec rm -f {} \;
+
+      - name: Compile firmware（编译固件）
+        run: |
+          echo -e "$(nproc) thread build."
+          make -j$(nproc) V=s
+
+      - name: Assemble artifact（整理生成的文件）
+        run: |
+          rm -rf ./artifact/
+          mkdir -p ./artifact/
+          find ./bin/targets/ -name "lce-kirkwood-*wifi-uImage" | xargs -i mv -f {} ./artifact/
+          find ./bin/targets/ -name "lce-kirkwood-*wifi-squashfs-factory.bin" | xargs -i mv -f {} ./artifact/
+          ls -lRth ./artifact/ > ./artifact/mytargets.txt
+          ls -lRth ./bin/targets/ >> ./artifact/mytargets.txt
+  
+      - name: Upload artifact（上传）
+        uses: actions/upload-artifact@v2
+        with:
+          name: butongwifi-kirkwood
+          path: ./artifact/

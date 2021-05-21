@@ -33,7 +33,9 @@ jobs:
         uses: actions/checkout@master
         with:
           ref: master
-      - run: git reset --hard 142cf2a
+      - run: |
+          cd openwrt
+          git reset --hard 142cf2a
 
       - name: Initialization environment（初始化环境）
         env:

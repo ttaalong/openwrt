@@ -33,9 +33,6 @@ jobs:
         uses: actions/checkout@master
         with:
           ref: master
-      - run: |
-          cd openwrt
-          git reset --hard 142cf2a
 
       - name: Initialization environment（初始化环境）
         env:
@@ -54,6 +51,8 @@ jobs:
       - name: Clone source code
         run: |
           df -hT $PWD
+          cd openwrt
+          git reset --hard 142cf2a
           git clone https://github.com/aboutboy/mypackages.git -b main package/mypackages
 
       - name: Update feeds（更新订阅）

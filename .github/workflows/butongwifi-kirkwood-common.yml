@@ -378,5 +378,5 @@ jobs:
       - name: Upload artifact（上传）
         uses: actions/upload-artifact@v2
         with:
-          name: butongwifi-kirkwood-${{ GITHUB_RUN_NUMBER }}
+          name: butongwifi-kirkwood-common-${{ GITHUB_RUN_NUMBER }}
           path: ./artifact/

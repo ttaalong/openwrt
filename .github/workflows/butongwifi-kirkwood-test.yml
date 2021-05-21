@@ -38,6 +38,7 @@ jobs:
         uses: actions/checkout@master
         with:
           ref: master
+      - run: git reset --hard 142cf2a
 
       - name: Initialization environment（初始化环境）
         env:
@@ -55,7 +56,6 @@ jobs:
 
       - name: Update feeds（更新订阅）
         run: |
-          git reset --hard 142cf2a
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 

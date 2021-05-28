@@ -221,14 +221,51 @@ jobs:
       - name: Assemble artifact（整理生成的文件）
         run: |
           rm -rf ./artifact/
-          mkdir -p ./artifact/
-          find ./bin/targets/ -name "lce-kirkwood-*wifi-uImage" | xargs -i mv -f {} ./artifact/
-          find ./bin/targets/ -name "lce-kirkwood-*wifi-squashfs-factory.bin" | xargs -i mv -f {} ./artifact/
-          ls -lRth ./artifact/ > ./artifact/mytargets.txt
-          ls -lRth ./bin/targets/ >> ./artifact/mytargets.txt
+          mkdir -p ./artifact/firmware
+          mkdir -p ./artifact/package
+          mkdir -p ./artifact/buildinfo
+          rm -rf $(find ./bin/targets/ -type d -name "packages")
+          cp -rf $(find ./bin/targets/ -type f) ./artifact/firmware/
+          cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package/
+          cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/buildinfo/
+          echo "::set-output name=status::success"
   
-      - name: Upload artifact（上传）
-        uses: actions/upload-artifact@v2
+      - name: Generate release tag
+        id: tag
+        if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+        run: |
+          echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
+          touch release.txt
+          echo "📖 [刷机方法](https://github.com/aboutboy/openwrt/blob/${{ github.sha }}/README_CN.md)" >> release.txt
+          echo "::set-output name=status::success"
+          r=$(cat release.txt)
+          echo "::set-output name=release::$r"
+
+      - name: Upload release asset
+        if: steps.tag.outputs.status == 'success' && !cancelled()
+        uses: svenstaro/upload-release-action@v2
         with:
-          name: butongwifi-kirkwood-base-$GITHUB_RUN_NUMBER
-          path: ./artifact/
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ${{ steps.tag.outputs.release }}
+          file: ./artifact/firmware/*
+          tag: ${{ github.ref }}
+          file_glob: true
+
+      - name: Deliver buildinfo
+        uses: actions/upload-artifact@master
+        with:
+          name: butongwifi-kirkwood-buildinfo-${{ github.run_number }}
+          path: ./artifact/buildinfo/
+
+      - name: Deliver package
+        uses: actions/upload-artifact@master
+        with:
+          name: butongwifi-kirkwood-package-${{ github.run_number }}
+          path: ./artifact/package/
+  
+      - name: Upload firmware
+        uses: actions/upload-artifact@master
+        with:
+          name: butongwifi-kirkwood-firmware-${{ github.run_number }}
+          path: ./artifact/firmware/

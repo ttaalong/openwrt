@@ -25,6 +25,8 @@ on:
 
 env:
   MYPACKAGES: https://github.com/aboutboy/mypackages.git
+  PING-PONG: https://github.com/xiaorouji/openwrt-passwall.git
+  ARGON: https://github.com/jerrykuku/luci-theme-argon.git
   REPO_BRANCH: main
   TZ: Asia/Shanghai
   UPLOAD_RELEASE: true
@@ -55,6 +57,12 @@ jobs:
           sudo -E apt-get clean
           sudo timedatectl set-timezone "$TZ"
           git clone $MYPACKAGES -b $REPO_BRANCH ./package/mypackages
+          git clone $PING-PONG -b $REPO_BRANCH ./package/ping-pong
+          git clone $ARGON -b $REPO_BRANCH ./package/luci-theme-argon
+          
+          # Modify Wireless
+          sed -i 's/OpenWrt/BUTONGWIFI/g' package/kernel/mac80211/files/lib/wifi/mac80211.sh
+          sed -i 's/set wireless.radio${devidx}.disabled=1/set wireless.radio${devidx}.disabled=0/g' package/kernel/mac80211/files/lib/wifi/mac80211.sh
 
       - name: Update feeds（更新订阅）
         run: |

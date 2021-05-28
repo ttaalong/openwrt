@@ -69,7 +69,7 @@ jobs:
           sed -i 's/set wireless.radio${devidx}.disabled=1/set wireless.radio${devidx}.disabled=0/g' package/kernel/mac80211/files/lib/wifi/mac80211.sh
           # Modify PINGPONG
           sed -i 'N;64 i \\tcp /usr/bin/upx $(STAGING_DIR_HOST)/bin/' package/ping-pong/v2ray-plugin/Makefile
-          sed -i 'N;63 i \\tcp /usr/bin/upx-ucl $(STAGING_DIR_HOST)/bin/' package/ping-pong/v2ray-plugin/Makefile
+          sed -i 'N;65 i \\tcp /usr/bin/upx-ucl $(STAGING_DIR_HOST)/bin/' package/ping-pong/v2ray-plugin/Makefile
           #sed -i '64c\	upx --lzma --best $(GO_PKG_BUILD_BIN_DIR)/v2ray-plugin' package/ping-pong/v2ray-plugin/Makefile
 
       - name: Update feeds（更新订阅）

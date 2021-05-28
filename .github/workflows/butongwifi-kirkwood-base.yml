@@ -226,6 +226,11 @@ jobs:
       - name: SSH connection to Actions
         uses: P3TERX/ssh2actions@main
         if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+        # Send connection info to Telegram (optional)
+        # You can find related documents here: https://core.telegram.org/bots
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Make download（下载依赖包）
         run: |

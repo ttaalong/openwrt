@@ -58,7 +58,7 @@ jobs:
           sudo timedatectl set-timezone "$TZ"
           git clone $MYPACKAGES -b $REPO_BRANCH ./package/mypackages
           git clone $PING-PONG -b $REPO_BRANCH ./package/ping-pong
-          git clone $ARGON -b $REPO_BRANCH ./package/luci-theme-argon
+          git clone $ARGON -b master ./package/luci-theme-argon
           
           # Modify Wireless
           sed -i 's/OpenWrt/BUTONGWIFI/g' package/kernel/mac80211/files/lib/wifi/mac80211.sh

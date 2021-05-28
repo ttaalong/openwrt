@@ -25,7 +25,7 @@ on:
 
 env:
   MYPACKAGES: https://github.com/aboutboy/mypackages.git
-  PING-PONG: https://github.com/xiaorouji/openwrt-passwall.git
+  PING_PONG: https://github.com/xiaorouji/openwrt-passwall.git
   ARGON: https://github.com/jerrykuku/luci-theme-argon.git
   REPO_BRANCH: main
   TZ: Asia/Shanghai
@@ -57,7 +57,7 @@ jobs:
           sudo -E apt-get clean
           sudo timedatectl set-timezone "$TZ"
           git clone $MYPACKAGES -b $REPO_BRANCH ./package/mypackages
-          git clone $PING-PONG -b $REPO_BRANCH ./package/ping-pong
+          git clone $PING_PONG -b $REPO_BRANCH ./package/ping-pong
           git clone $ARGON -b master ./package/luci-theme-argon
           
           # Modify Wireless

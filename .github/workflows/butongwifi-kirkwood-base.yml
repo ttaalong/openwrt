@@ -57,6 +57,10 @@ jobs:
           sudo -E apt-get clean
           sudo timedatectl set-timezone "$TZ"
           git clone $MYPACKAGES -b $REPO_BRANCH ./package/mypackages
+          rm -rf ./package/mypackages/luci-app-cowbbonding
+          rm -rf ./package/mypackages/luci-app-cowbping
+          rm -rf ./package/mypackages/luci-theme-argon
+          rm -rf ./package/mypackages/OpenAppFilter
           git clone $PING_PONG -b $REPO_BRANCH ./package/ping-pong
           git clone $ARGON -b master ./package/luci-theme-argon
           

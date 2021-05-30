@@ -25,8 +25,11 @@ on:
 
 env:
   MYPACKAGES: https://github.com/aboutboy/mypackages.git
+  PING_PONG: https://github.com/xiaorouji/openwrt-passwall.git
+  ARGON: https://github.com/jerrykuku/luci-theme-argon.git
   REPO_BRANCH: main
   TZ: Asia/Shanghai
+  UPLOAD_RELEASE: true
 
 jobs:
   build:
@@ -49,9 +52,22 @@ jobs:
           sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php*
           for apt_file in `grep -lr microsoft /etc/apt/sources.list.d/`; do sudo rm $apt_file; done
           sudo -E apt-get update
-          sudo -E apt-get -y install build-essential ccache ecj fastjar file g++ gawk gettext git java-propose-classpath libelf-dev libncurses5-dev libncursesw5-dev libssl-dev python python2.7-dev python3 unzip wget python3-distutils python3-setuptools rsync subversion swig time xsltproc zlib1g-dev
+          sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler ccache ecj fastjar file g++ java-propose-classpath libncursesw5-dev python python2.7-dev python3 wget python3-distutils python3-setuptools rsync swig time xsltproc
           sudo -E apt-get -y autoremove --purge
           sudo -E apt-get clean
+          sudo timedatectl set-timezone "$TZ"
+          git clone $MYPACKAGES -b $REPO_BRANCH ./package/mypackages
+          rm -rf ./package/mypackages/luci-theme-argon
+          git clone $PING_PONG -b $REPO_BRANCH ./package/ping-pong
+          git clone $ARGON -b master ./package/luci-theme-argon
+          
+          # Modify Wireless
+          sed -i 's/OpenWrt/BUTONGWIFI/g' package/kernel/mac80211/files/lib/wifi/mac80211.sh
+          sed -i 's/set wireless.radio${devidx}.disabled=1/set wireless.radio${devidx}.disabled=0/g' package/kernel/mac80211/files/lib/wifi/mac80211.sh
+          # Modify PINGPONG
+          sed -i 'N;64 i \\tcp /usr/bin/upx $(STAGING_DIR_HOST)/bin/' package/ping-pong/v2ray-plugin/Makefile
+          sed -i 'N;65 i \\tcp /usr/bin/upx-ucl $(STAGING_DIR_HOST)/bin/' package/ping-pong/v2ray-plugin/Makefile
+          #sed -i '64c\	upx --lzma --best $(GO_PKG_BUILD_BIN_DIR)/v2ray-plugin' package/ping-pong/v2ray-plugin/Makefile
 
       - name: Update feeds（更新订阅）
         run: |
@@ -187,6 +203,7 @@ jobs:
           CONFIG_PACKAGE_luci-proto-ipv6=y
           CONFIG_PACKAGE_luci-proto-ppp=y
           CONFIG_PACKAGE_luci-theme-bootstrap=y
+          CONFIG_PACKAGE_luci-theme-argon=y
           CONFIG_PACKAGE_rpcd=y
           CONFIG_PACKAGE_rpcd-mod-file=y
           CONFIG_PACKAGE_rpcd-mod-iwinfo=y
@@ -206,6 +223,11 @@ jobs:
       - name: SSH connection to Actions
         uses: P3TERX/ssh2actions@main
         if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+        # Send connection info to Telegram (optional)
+        # You can find related documents here: https://core.telegram.org/bots
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Make download（下载依赖包）
         run: |
@@ -221,14 +243,51 @@ jobs:
       - name: Assemble artifact（整理生成的文件）
         run: |
           rm -rf ./artifact/
-          mkdir -p ./artifact/
-          find ./bin/targets/ -name "lce-kirkwood-*wifi-uImage" | xargs -i mv -f {} ./artifact/
-          find ./bin/targets/ -name "lce-kirkwood-*wifi-squashfs-factory.bin" | xargs -i mv -f {} ./artifact/
-          ls -lRth ./artifact/ > ./artifact/mytargets.txt
-          ls -lRth ./bin/targets/ >> ./artifact/mytargets.txt
+          mkdir -p ./artifact/firmware
+          mkdir -p ./artifact/package
+          mkdir -p ./artifact/buildinfo
+          rm -rf $(find ./bin/targets/ -type d -name "packages")
+          cp -rf $(find ./bin/targets/ -type f) ./artifact/firmware/
+          cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package/
+          cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/buildinfo/
+          echo "::set-output name=status::success"
   
-      - name: Upload artifact（上传）
-        uses: actions/upload-artifact@v2
+      - name: Generate release tag
+        id: tag
+        if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+        run: |
+          echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
+          touch release.txt
+          echo "📖 [刷机方法](https://github.com/aboutboy/openwrt/blob/${{ github.sha }}/README_CN.md)" >> release.txt
+          echo "::set-output name=status::success"
+          r=$(cat release.txt)
+          echo "::set-output name=release::$r"
+
+      - name: Upload release asset
+        if: steps.tag.outputs.status == 'success' && !cancelled()
+        uses: svenstaro/upload-release-action@v2
         with:
-          name: butongwifi-kirkwood-base-$GITHUB_RUN_NUMBER
-          path: ./artifact/
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ${{ steps.tag.outputs.release }}
+          file: ./artifact/firmware/*
+          tag: ${{ github.ref }}-${{ github.run_number }}-${{ steps.tag.outputs.release_tag }}
+          file_glob: true
+
+      - name: Deliver buildinfo
+        uses: actions/upload-artifact@master
+        with:
+          name: butongwifi-kirkwood-buildinfo-${{ github.run_number }}
+          path: ./artifact/buildinfo/
+
+      - name: Deliver package
+        uses: actions/upload-artifact@master
+        with:
+          name: butongwifi-kirkwood-package-${{ github.run_number }}
+          path: ./artifact/package/
+  
+      - name: Upload firmware
+        uses: actions/upload-artifact@master
+        with:
+          name: butongwifi-kirkwood-firmware-${{ github.run_number }}
+          path: ./artifact/firmware/
